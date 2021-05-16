@@ -9,12 +9,16 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/dunkbing/sfw-checker-viet/backend/handlers"
 	"github.com/gorilla/mux"
 )
 
 func main() {
 	l := log.New(os.Stdout, "backend", log.LstdFlags)
 	sm := mux.NewRouter()
+
+	getRoute := sm.Methods(http.MethodGet).Subrouter()
+	getRoute.HandleFunc("/posts", handlers.GetAll)
 
 	s := &http.Server{
 		Addr:         ":8080",
