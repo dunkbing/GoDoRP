@@ -9,11 +9,16 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/dunkbing/sfw-checker-viet/backend/data"
 	"github.com/dunkbing/sfw-checker-viet/backend/handlers"
 	"github.com/gorilla/mux"
+	"github.com/joho/godotenv"
 )
 
 func main() {
+	data.Init()
+	godotenv.Load()
+	println(os.Getenv("POSTGRES_USER"))
 	l := log.New(os.Stdout, "backend", log.LstdFlags)
 	sm := mux.NewRouter()
 
