@@ -15,11 +15,10 @@ var err error
 func Init() {
 	USER := os.Getenv("POSTGRES_USER")
 	PASSWORD := os.Getenv("POSTGRES_PASSWORD")
-	HOST := os.Getenv("DB_HOST")
 	PORT := os.Getenv("DB_PORT")
 	DB_NAME := os.Getenv("POSTGRES_DB")
 
-	dns := fmt.Sprintf("host=%v port=%v user=%v database=%v password=%v sslmode=disable", HOST, PORT, USER, DB_NAME, PASSWORD)
+	dns := fmt.Sprintf("host=postgres port=%v user=%v database=%v password=%v sslmode=disable", PORT, USER, DB_NAME, PASSWORD)
 	for i := 0; i < 5; i++ {
 		DB, err = gorm.Open(postgres.Open(dns), &gorm.Config{})
 		if err == nil {
