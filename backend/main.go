@@ -16,9 +16,7 @@ import (
 )
 
 func main() {
-	data.Init()
 	godotenv.Load()
-	println(os.Getenv("POSTGRES_USER"))
 	l := log.New(os.Stdout, "backend", log.LstdFlags)
 	sm := mux.NewRouter()
 
@@ -39,6 +37,7 @@ func main() {
 			l.Fatal(err)
 		}
 	}()
+	go data.Init()
 
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, os.Interrupt)

@@ -1,14 +1,17 @@
 version: '3.7'
 services:
-  db:
+  postgres:
+    container_name: pg_container
     build: ./db
     volumes:
       - ./db/pgdata:/pgdata
     ports:
-      - "5432"
+      - 5432:5432
+    env_file: .env
     environment:
-      - POSTGRES_USER=docker
-      - POSTGRES_PASSWORD=docker
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - PGDATA=/pgdata
 
   backend:
@@ -17,11 +20,12 @@ services:
       args:
         app_env: ${APP_ENV}
     volumes:
-      - ./api:/go/src/github.com/user/GoDoRP/api
+      - ./backend:/go/src/github.com/user/GoDoRP/api
+    env_file: ./backend/.env
     ports:
       - "5000:8080"
     links:
-      - db
+      - postgres
 
   frontend:
     build:

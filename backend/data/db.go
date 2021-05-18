@@ -1,6 +1,8 @@
 package data
 
 import (
+	"fmt"
+	"os"
 	"time"
 
 	"gorm.io/driver/postgres"
@@ -11,10 +13,17 @@ var DB *gorm.DB
 var err error
 
 func Init() {
-	dns := "user=docker password=docker sslmode=disable host=db"
+	USER := os.Getenv("POSTGRES_USER")
+	PASSWORD := os.Getenv("POSTGRES_PASSWORD")
+	HOST := os.Getenv("DB_HOST")
+	PORT := os.Getenv("DB_PORT")
+	DB_NAME := os.Getenv("POSTGRES_DB")
+
+	dns := fmt.Sprintf("host=%v port=%v user=%v database=%v password=%v sslmode=disable", HOST, PORT, USER, DB_NAME, PASSWORD)
 	for i := 0; i < 5; i++ {
 		DB, err = gorm.Open(postgres.Open(dns), &gorm.Config{})
 		if err == nil {
+			println("connected to db")
 			break
 		}
 		time.Sleep(5 * time.Second)
