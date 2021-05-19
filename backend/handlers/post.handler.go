@@ -8,7 +8,7 @@ import (
 
 func GetAll(rw http.ResponseWriter, req *http.Request) {
 	rw.Header().Add("Content-Type", "application/json")
-	posts := data.GetPosts()
+	posts := data.GetAll()
 
 	err := data.ToJson(posts, rw)
 	if err != nil {
