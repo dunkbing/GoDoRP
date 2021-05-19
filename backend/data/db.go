@@ -32,5 +32,7 @@ func Init() {
 		panic("Failed to connect to database")
 	}
 
-	DB.AutoMigrate()
+	DB.AutoMigrate(
+		&Post{},
+	)
 }
