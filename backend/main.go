@@ -23,6 +23,9 @@ func main() {
 	getRoute := sm.Methods(http.MethodGet).Subrouter()
 	getRoute.HandleFunc("/posts", handlers.GetAll)
 
+	postRoute := sm.Methods(http.MethodPost).Subrouter()
+	postRoute.HandleFunc("/posts", handlers.Create)
+
 	s := &http.Server{
 		Addr:         ":8080",
 		Handler:      sm,

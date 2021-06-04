@@ -15,3 +15,8 @@ func GetAll(rw http.ResponseWriter, req *http.Request) {
 		http.Error(rw, "Unable to marshal json", http.StatusInternalServerError)
 	}
 }
+
+func Create(rw http.ResponseWriter, req *http.Request) {
+	data.Create(req)
+	rw.WriteHeader(http.StatusNoContent)
+}
