@@ -11,6 +11,7 @@
     "prettier": true,
     "interface-name": false,
     "no-string-literal": false,
-    "no-shadowed-variable": false
+    "no-shadowed-variable": false,
+    "jsx-boolean-value": false
   }
 }
