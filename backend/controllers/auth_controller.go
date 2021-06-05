@@ -46,7 +46,7 @@ func Login(c *fiber.Ctx) error {
 	var user models.User
 	database.DB.Where("email = ?", data["email"]).First(&user)
 
-	if user.ID == 0 {
+	if user.Id == 0 {
 		c.Status(http.StatusNotFound)
 		return c.JSON(fiber.Map{
 			"message": "user not found",
@@ -61,9 +61,9 @@ func Login(c *fiber.Ctx) error {
 	}
 
 	claims := jwt.StandardClaims{
-		Id:        string(int32(user.ID)),
+		Id:        string(int32(user.Id)),
 		ExpiresAt: time.Now().Add(time.Hour * 24).Unix(),
-		Issuer:    strconv.FormatInt(int64(user.ID), 10),
+		Issuer:    strconv.FormatInt(int64(user.Id), 10),
 	}
 
 	jwtToken := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
