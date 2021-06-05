@@ -14,7 +14,30 @@ import (
 func Forgot(c *fiber.Ctx) error {
 	var data map[string]string
 	if err := c.BodyParser(&data); err != nil {
-		return err
+		c.Status(http.StatusInternalServerError)
+		return c.JSON(fiber.Map{
+			"message": err.Error(),
+		})
+	}
+
+	email := data["email"]
+
+	var user models.User
+
+	res := database.DB.Model(&user).Where("email = ?", email).First(&user)
+
+	if res.Error != nil {
+		c.Status(http.StatusInternalServerError)
+		c.JSON(fiber.Map{
+			"message": "some error occur",
+		})
+	}
+
+	if user.Email == "" {
+		c.Status(http.StatusNotFound)
+		return c.JSON(fiber.Map{
+			"message": "email does not exist",
+		})
 	}
 
 	token := RandStringRunes(12)
