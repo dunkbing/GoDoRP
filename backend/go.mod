@@ -3,6 +3,7 @@ module github.com/dunkbing/sfw-checker-viet/backend
 go 1.16
 
 require (
+	github.com/dgrijalva/jwt-go v3.2.0+incompatible // indirect
 	github.com/gofiber/fiber/v2 v2.11.0 // indirect
 	github.com/gorilla/mux v1.8.0
 	github.com/joho/godotenv v1.3.0 // indirect
