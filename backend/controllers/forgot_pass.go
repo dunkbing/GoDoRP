@@ -7,6 +7,7 @@ import (
 
 	"github.com/dunkbing/sfw-checker-viet/backend/database"
 	"github.com/dunkbing/sfw-checker-viet/backend/models"
+	"github.com/dunkbing/sfw-checker-viet/backend/utils"
 	"github.com/gofiber/fiber/v2"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -21,6 +22,14 @@ func Forgot(c *fiber.Ctx) error {
 	}
 
 	email := data["email"]
+
+	if !utils.ValidEmail(email) {
+		c.Status(http.StatusBadRequest)
+		return c.JSON(utils.AppError{
+			Message:    "invalid email",
+			StatusCode: http.StatusBadRequest,
+		})
+	}
 
 	var user models.User
 

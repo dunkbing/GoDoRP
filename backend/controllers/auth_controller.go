@@ -9,6 +9,7 @@ import (
 	"github.com/dgrijalva/jwt-go"
 	"github.com/dunkbing/sfw-checker-viet/backend/database"
 	"github.com/dunkbing/sfw-checker-viet/backend/models"
+	"github.com/dunkbing/sfw-checker-viet/backend/utils"
 	"github.com/gofiber/fiber/v2"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -17,6 +18,20 @@ func Register(c *fiber.Ctx) error {
 	var data map[string]string
 	if err := c.BodyParser(&data); err != nil {
 		return err
+	}
+
+	if !utils.ValidEmail(data["email"]) {
+		c.Status(http.StatusBadRequest)
+		return c.JSON(utils.AppError{
+			Message: "invalid email",
+		})
+	}
+
+	if !utils.ValidPassword(data["password"]) {
+		c.Status(http.StatusBadRequest)
+		return c.JSON(utils.AppError{
+			Message: "invalid password",
+		})
 	}
 
 	if data["password"] != data["confirm_pass"] {
