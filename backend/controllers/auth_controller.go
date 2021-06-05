@@ -1,7 +1,9 @@
 package controllers
 
 import (
+	"fmt"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
@@ -10,6 +12,11 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"golang.org/x/crypto/bcrypt"
 )
+
+type claims struct {
+	Id int
+	jwt.StandardClaims
+}
 
 func Register(c *fiber.Ctx) error {
 	var data map[string]string
@@ -61,7 +68,7 @@ func Login(c *fiber.Ctx) error {
 	claims := jwt.StandardClaims{
 		Id:        string(int32(user.ID)),
 		ExpiresAt: time.Now().Add(time.Hour * 24).Unix(),
-		Issuer:    user.FirstName,
+		Issuer:    strconv.FormatInt(int64(user.ID), 10),
 	}
 
 	jwtToken := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
@@ -83,4 +90,29 @@ func Login(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{
 		"jwt": token,
 	})
+}
+
+func User(c *fiber.Ctx) error {
+	cookie := c.Cookies("jwt")
+
+	claims := jwt.StandardClaims{}
+
+	token, err := jwt.ParseWithClaims(cookie, &claims, func(t *jwt.Token) (interface{}, error) {
+		return []byte("secret"), nil
+	})
+	fmt.Println(claims)
+
+	if err != nil || !token.Valid {
+		c.Status(http.StatusUnauthorized)
+		return c.JSON(fiber.Map{
+			"message": "unauthenticated",
+		})
+	}
+
+	// fmt.Println(token.Claims)
+	id := claims.Issuer
+	var user models.User
+	database.DB.Where("id = ?", id).First(&user)
+
+	return c.JSON(user)
 }
