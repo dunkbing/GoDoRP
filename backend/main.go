@@ -10,6 +10,12 @@ import (
 func main() {
 	database.Connect()
 
+	sqlDb, err := database.DB.DB()
+	if err != nil {
+		panic(err.Error())
+	}
+	defer sqlDb.Close()
+
 	app := fiber.New()
 
 	app.Use(cors.New(cors.Config{
