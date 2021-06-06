@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"math/rand"
 	"net/mail"
 	"unicode"
 )
@@ -52,4 +53,14 @@ func ValidPassword(password string) bool {
 func ValidEmail(email string) bool {
 	_, err := mail.ParseAddress(email)
 	return err == nil
+}
+
+func RandStringRunes(n int) string {
+	var letterRunes = []rune("qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM")
+
+	b := make([]rune, n)
+	for i := range b {
+		b[i] = letterRunes[rand.Intn(len(letterRunes))]
+	}
+	return string(b)
 }

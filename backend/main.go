@@ -1,8 +1,8 @@
 package main
 
 import (
+	"github.com/dunkbing/sfw-checker-viet/backend/api"
 	"github.com/dunkbing/sfw-checker-viet/backend/database"
-	"github.com/dunkbing/sfw-checker-viet/backend/routes"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 )
@@ -17,7 +17,7 @@ func main() {
 		AllowOrigins:     "http://localhost:3000",
 	}))
 
-	routes.Setup(app)
+	api.Init(app)
 
 	app.Listen(":8080")
 }

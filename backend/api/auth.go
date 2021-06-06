@@ -1,10 +1,12 @@
-package controllers
+package api
 
 import (
 	"fmt"
-	"net/http"
 	"strconv"
 	"time"
+
+	"net/http"
+	"net/smtp"
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/dunkbing/sfw-checker-viet/backend/database"
@@ -14,7 +16,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-func Register(c *fiber.Ctx) error {
+func register(c *fiber.Ctx) error {
 	var data map[string]string
 	if err := c.BodyParser(&data); err != nil {
 		return err
@@ -52,7 +54,7 @@ func Register(c *fiber.Ctx) error {
 	return c.JSON(user)
 }
 
-func Login(c *fiber.Ctx) error {
+func login(c *fiber.Ctx) error {
 	var data map[string]string
 	if err := c.BodyParser(&data); err != nil {
 		return err
@@ -102,7 +104,7 @@ func Login(c *fiber.Ctx) error {
 	})
 }
 
-func User(c *fiber.Ctx) error {
+func user(c *fiber.Ctx) error {
 	cookie := c.Cookies("jwt")
 
 	claims := jwt.StandardClaims{}
@@ -127,7 +129,7 @@ func User(c *fiber.Ctx) error {
 	return c.JSON(user)
 }
 
-func Logout(c *fiber.Ctx) error {
+func logout(c *fiber.Ctx) error {
 	cookie := fiber.Cookie{
 		Name:     "jwt",
 		Value:    "",
@@ -140,4 +142,110 @@ func Logout(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{
 		"message": "success",
 	})
+}
+
+func forgot(c *fiber.Ctx) error {
+	var data map[string]string
+	if err := c.BodyParser(&data); err != nil {
+		c.Status(http.StatusInternalServerError)
+		return c.JSON(fiber.Map{
+			"message": err.Error(),
+		})
+	}
+
+	email := data["email"]
+
+	if !utils.ValidEmail(email) {
+		c.Status(http.StatusBadRequest)
+		return c.JSON(utils.AppError{
+			Message:    "invalid email",
+			StatusCode: http.StatusBadRequest,
+		})
+	}
+
+	var user models.User
+
+	res := database.DB.Model(&user).Where("email = ?", email).First(&user)
+
+	if res.Error != nil {
+		c.Status(http.StatusInternalServerError)
+		c.JSON(fiber.Map{
+			"message": "some error occur",
+		})
+	}
+
+	if user.Email == "" {
+		c.Status(http.StatusNotFound)
+		return c.JSON(fiber.Map{
+			"message": "email does not exist",
+		})
+	}
+
+	token := utils.RandStringRunes(12)
+
+	passwordReset := models.PasswordReset{
+		Email: data["email"],
+		Token: token,
+	}
+
+	database.DB.Create(&passwordReset)
+
+	from := "admin@dunkbing.com"
+	to := []string{
+		data["email"],
+	}
+
+	url := "http://localhost:3000/reset/" + token
+
+	message := []byte("Click <a href=\"" + url + "\">here</a> to reset your password!")
+
+	err := smtp.SendMail("0.0.0.0:1025", nil, from, to, message)
+
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(fiber.Map{
+		"message": "success",
+	})
+}
+
+func reset(c *fiber.Ctx) error {
+	var data map[string]string
+	if err := c.BodyParser(&data); err != nil {
+		return err
+	}
+
+	if data["password"] != data["confirm_pass"] {
+		c.Status(400)
+		return c.JSON(fiber.Map{
+			"message": "Passwords do not match",
+		})
+	}
+
+	var passwordReset = models.PasswordReset{}
+
+	if res := database.DB.Where("token = ?", data["token"]).Last(&passwordReset); res.Error != nil {
+		c.Status(http.StatusBadRequest)
+		return c.JSON(fiber.Map{
+			"message": "Invalid token!",
+		})
+	}
+
+	password, _ := bcrypt.GenerateFromPassword([]byte(data["password"]), 14)
+	database.DB.Model(&models.User{}).Where("email = ?", passwordReset.Email).Update("password", password)
+
+	return c.JSON(fiber.Map{
+		"message": "success",
+	})
+}
+
+func (api *API) InitAuth() {
+	auth := api.BaseRoutes.Auth
+	auth.Post("register", register)
+	auth.Post("login", login)
+	auth.Post("logout", logout)
+	auth.Get("user", user)
+	auth.Post("forgot", forgot)
+	auth.Post("reset", reset)
 }
