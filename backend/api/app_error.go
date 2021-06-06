@@ -1,4 +1,4 @@
-package utils
+package api
 
 type AppError struct {
 	Id            string `json:"id,omitempty"`

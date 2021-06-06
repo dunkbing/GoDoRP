@@ -1,6 +1,8 @@
 package api
 
 import (
+	"net/http"
+
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -15,6 +17,26 @@ type API struct {
 }
 
 const API_PREFIX = "api"
+
+func StatusOk(c *fiber.Ctx, json interface{}) error {
+	c.Status(http.StatusOK)
+	return c.JSON(json)
+}
+
+func StatusCreated(c *fiber.Ctx, json interface{}) error {
+	c.Status(http.StatusCreated)
+	return c.JSON(json)
+}
+
+func StatusBadRequest(c *fiber.Ctx, appError AppError) error {
+	c.Status(http.StatusBadRequest)
+	return c.JSON(appError)
+}
+
+func StatusNotFound(c *fiber.Ctx, appError AppError) error {
+	c.Status(http.StatusNotFound)
+	return c.JSON(appError)
+}
 
 func Init(app *fiber.App) {
 	api := &API{

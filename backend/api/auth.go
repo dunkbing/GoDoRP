@@ -23,23 +23,20 @@ func register(c *fiber.Ctx) error {
 	}
 
 	if !utils.ValidEmail(data["email"]) {
-		c.Status(http.StatusBadRequest)
-		return c.JSON(utils.AppError{
-			Message: "invalid email",
+		return StatusBadRequest(c, AppError{
+			Message: "Invalid email",
 		})
 	}
 
 	if !utils.ValidPassword(data["password"]) {
-		c.Status(http.StatusBadRequest)
-		return c.JSON(utils.AppError{
+		return StatusBadRequest(c, AppError{
 			Message: "invalid password",
 		})
 	}
 
 	if data["password"] != data["confirm_pass"] {
-		c.Status(400)
-		return c.JSON(fiber.Map{
-			"message": "Passwords do not match",
+		return StatusBadRequest(c, AppError{
+			Message: "Passwords do not match",
 		})
 	}
 	password, _ := bcrypt.GenerateFromPassword([]byte(data["password"]), 14)
@@ -51,29 +48,30 @@ func register(c *fiber.Ctx) error {
 
 	database.DB.Create(&user)
 
-	return c.JSON(user)
+	return StatusCreated(c, user)
+	// return c.JSON(user)
 }
 
 func login(c *fiber.Ctx) error {
 	var data map[string]string
 	if err := c.BodyParser(&data); err != nil {
-		return err
+		return StatusBadRequest(c, AppError{
+			Message: err.Error(),
+		})
 	}
 
 	var user models.User
 	database.DB.Where("email = ?", data["email"]).First(&user)
 
 	if user.Id == 0 {
-		c.Status(http.StatusNotFound)
-		return c.JSON(fiber.Map{
-			"message": "user not found",
+		return StatusNotFound(c, AppError{
+			Message: "User not found",
 		})
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(data["password"])); err != nil {
-		c.Status(http.StatusBadRequest)
-		return c.JSON(fiber.Map{
-			"message": "password not correct",
+		return StatusBadRequest(c, AppError{
+			Message: "Incorrect password",
 		})
 	}
 
@@ -126,7 +124,7 @@ func user(c *fiber.Ctx) error {
 	var user models.User
 	database.DB.Where("id = ?", id).First(&user)
 
-	return c.JSON(user)
+	return StatusOk(c, user)
 }
 
 func logout(c *fiber.Ctx) error {
@@ -157,7 +155,7 @@ func forgot(c *fiber.Ctx) error {
 
 	if !utils.ValidEmail(email) {
 		c.Status(http.StatusBadRequest)
-		return c.JSON(utils.AppError{
+		return c.JSON(AppError{
 			Message:    "invalid email",
 			StatusCode: http.StatusBadRequest,
 		})
