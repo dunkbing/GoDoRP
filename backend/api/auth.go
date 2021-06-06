@@ -1,6 +1,7 @@
 package api
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 	"time"
@@ -14,6 +15,7 @@ import (
 	"github.com/dunkbing/sfw-checker-viet/backend/utils"
 	"github.com/gofiber/fiber/v2"
 	"golang.org/x/crypto/bcrypt"
+	"gorm.io/gorm"
 )
 
 func register(c *fiber.Ctx) error {
@@ -68,9 +70,8 @@ func login(c *fiber.Ctx) error {
 	}
 
 	var user models.User
-	database.DB.Where("email = ?", data["email"]).First(&user)
 
-	if user.Id == 0 {
+	if err := database.DB.Where("email = ?", data["email"]).First(&user).Error; errors.Is(err, gorm.ErrRecordNotFound) {
 		return StatusNotFound(c, AppError{
 			Message: "User not found",
 		})
