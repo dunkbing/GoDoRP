@@ -1,55 +1,23 @@
 package main
 
 import (
-	"context"
-	"log"
-	"net/http"
-	"os"
-	"os/signal"
-	"syscall"
-	"time"
-
-	"github.com/dunkbing/sfw-checker-viet/backend/data"
-	"github.com/dunkbing/sfw-checker-viet/backend/handlers"
-	"github.com/gorilla/mux"
-	"github.com/joho/godotenv"
+	"github.com/dunkbing/sfw-checker-viet/backend/api"
+	"github.com/dunkbing/sfw-checker-viet/backend/database"
+	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/cors"
 )
 
 func main() {
-	godotenv.Load()
-	l := log.New(os.Stdout, "backend", log.LstdFlags)
-	sm := mux.NewRouter()
+	database.Connect()
 
-	getRoute := sm.Methods(http.MethodGet).Subrouter()
-	getRoute.HandleFunc("/posts", handlers.GetAll)
+	app := fiber.New()
 
-	postRoute := sm.Methods(http.MethodPost).Subrouter()
-	postRoute.HandleFunc("/posts", handlers.Create)
+	app.Use(cors.New(cors.Config{
+		AllowCredentials: true,
+		AllowOrigins:     "http://localhost:3000",
+	}))
 
-	s := &http.Server{
-		Addr:         ":8080",
-		Handler:      sm,
-		IdleTimeout:  120 * time.Second,
-		ReadTimeout:  time.Second,
-		WriteTimeout: time.Second,
-	}
+	api.Init(app)
 
-	go func() {
-		err := s.ListenAndServe()
-		if err != nil {
-			l.Fatal(err)
-		}
-	}()
-	go data.Init()
-
-	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, os.Interrupt)
-	signal.Notify(sigChan, syscall.SIGTERM)
-
-	sig := <-sigChan
-	l.Println("Receive terminate, shutting down", sig)
-
-	tc, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-	s.Shutdown(tc)
+	app.Listen(":8080")
 }
