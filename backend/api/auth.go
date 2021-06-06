@@ -22,7 +22,16 @@ func register(c *fiber.Ctx) error {
 		return err
 	}
 
-	if !utils.ValidEmail(data["email"]) {
+	var user models.User
+
+	if utils.ValidEmail(data["email"]) {
+		database.DB.Where("email = ?", data["email"]).First(&user)
+		if user.Id != 0 {
+			return StatusBadRequest(c, AppError{
+				Message: "Email already in use",
+			})
+		}
+	} else {
 		return StatusBadRequest(c, AppError{
 			Message: "Invalid email",
 		})
@@ -40,7 +49,6 @@ func register(c *fiber.Ctx) error {
 		})
 	}
 	password, _ := bcrypt.GenerateFromPassword([]byte(data["password"]), 14)
-	var user models.User
 	user.FirstName = data["first_name"]
 	user.LastName = data["last_name"]
 	user.Email = data["email"]
@@ -49,7 +57,6 @@ func register(c *fiber.Ctx) error {
 	database.DB.Create(&user)
 
 	return StatusCreated(c, user)
-	// return c.JSON(user)
 }
 
 func login(c *fiber.Ctx) error {
