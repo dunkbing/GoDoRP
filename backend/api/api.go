@@ -16,7 +16,7 @@ type API struct {
 	BaseRoutes *Routes
 }
 
-const API_PREFIX = "api"
+const PrefixApi = "api"
 
 func StatusOk(c *fiber.Ctx, json interface{}) error {
 	c.Status(http.StatusOK)
@@ -44,7 +44,7 @@ func Init(app *fiber.App) {
 		BaseRoutes: &Routes{},
 	}
 
-	api.BaseRoutes.ApiRoot = app.Group(API_PREFIX)
+	api.BaseRoutes.ApiRoot = app.Group(PrefixApi)
 	api.BaseRoutes.Auth = api.BaseRoutes.ApiRoot.Group("auth")
 
 	api.InitAuth()

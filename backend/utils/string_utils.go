@@ -6,7 +6,7 @@ import (
 	"unicode"
 )
 
-// Password validates plain password against the rules defined below.
+// ValidPassword validates plain password against the rules defined below.
 //
 // upp: at least one upper case letter.
 // low: at least one lower case letter.

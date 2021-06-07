@@ -175,7 +175,7 @@ func forgot(c *fiber.Ctx) error {
 
 	if res.Error != nil {
 		c.Status(http.StatusInternalServerError)
-		c.JSON(fiber.Map{
+		return c.JSON(fiber.Map{
 			"message": "some error occur",
 		})
 	}

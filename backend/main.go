@@ -10,11 +10,7 @@ import (
 func main() {
 	database.Connect()
 
-	sqlDb, err := database.DB.DB()
-	if err != nil {
-		panic(err.Error())
-	}
-	defer sqlDb.Close()
+	defer database.Close()
 
 	app := fiber.New()
 
@@ -25,5 +21,5 @@ func main() {
 
 	api.Init(app)
 
-	app.Listen(":8080")
+	_ = app.Listen(":8080")
 }
