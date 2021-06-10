@@ -1,9 +1,8 @@
 package api
 
 import (
-	"errors"
 	"fmt"
-	"strconv"
+	"github.com/dunkbing/sfw-checker-viet/backend/service"
 	"time"
 
 	"net/http"
@@ -15,7 +14,6 @@ import (
 	"github.com/dunkbing/sfw-checker-viet/backend/utils"
 	"github.com/gofiber/fiber/v2"
 	"golang.org/x/crypto/bcrypt"
-	"gorm.io/gorm"
 )
 
 // @Summary Register a new user.
@@ -28,7 +26,6 @@ import (
 // @Failure 400 {object} HttpError
 // @Router /api/auth/register [post]
 func register(c *fiber.Ctx) error {
-
 	var registerUser models.RegisterUser
 	if err := c.BodyParser(&registerUser); err != nil {
 		return StatusError(c, HttpError{
@@ -37,45 +34,16 @@ func register(c *fiber.Ctx) error {
 		})
 	}
 
-	var user models.User
+	dbUser, err := service.Register(registerUser)
 
-	if utils.ValidEmail(registerUser.Email) {
-		database.DB.Where("email = ?", registerUser.Email).First(&user)
-		if user.Id != 0 {
-			return StatusError(c, HttpError{
-				Message:    "Email already in use",
-				StatusCode: http.StatusBadRequest,
-			})
-		}
-	} else {
+	if err != nil {
 		return StatusError(c, HttpError{
-			Message:    "Invalid email",
+			Message:    err.Error(),
 			StatusCode: http.StatusBadRequest,
 		})
 	}
 
-	if !utils.ValidPassword(registerUser.Password) {
-		return StatusError(c, HttpError{
-			Message:    "invalid password",
-			StatusCode: http.StatusBadRequest,
-		})
-	}
-
-	if registerUser.Password != registerUser.ConfirmPass {
-		return StatusError(c, HttpError{
-			Message:    "Passwords do not match",
-			StatusCode: http.StatusBadRequest,
-		})
-	}
-	password, _ := bcrypt.GenerateFromPassword([]byte(registerUser.Password), 14)
-	user.FirstName = registerUser.FirstName
-	user.LastName = registerUser.LastName
-	user.Email = registerUser.Email
-	user.Password = string(password)
-
-	database.DB.Create(&user)
-
-	return StatusCreated(c, user)
+	return StatusCreated(c, dbUser)
 }
 
 // @Summary Login to user
@@ -83,8 +51,8 @@ func register(c *fiber.Ctx) error {
 // @Tags login
 // @Accept json
 // @Produce json
-// @Param user body models.User true "login user"
-// @Success 201 {object} models.User
+// @Param user body models.LoginUser true "login user"
+// @Success 200 {object} models.LoginResponse
 // @Failure 400 {object} interface{}
 // @Router /api/auth/login [post]
 func login(c *fiber.Ctx) error {
@@ -96,33 +64,13 @@ func login(c *fiber.Ctx) error {
 		})
 	}
 
-	var dbUser models.User
-
-	if err := database.DB.Where("email = ?", loginUser.Email).First(&dbUser).Error; errors.Is(err, gorm.ErrRecordNotFound) {
-		return StatusError(c, HttpError{
-			Message:    "User not found",
-			StatusCode: http.StatusNotFound,
-		})
-	}
-
-	if err := bcrypt.CompareHashAndPassword([]byte(dbUser.Password), []byte(loginUser.Password)); err != nil {
-		return StatusError(c, HttpError{
-			Message:    "Incorrect password",
-			StatusCode: http.StatusBadRequest,
-		})
-	}
-
-	claims := jwt.StandardClaims{
-		Id:        string(int32(dbUser.Id)),
-		ExpiresAt: time.Now().Add(time.Hour * 24).Unix(),
-		Issuer:    strconv.FormatInt(int64(dbUser.Id), 10),
-	}
-
-	jwtToken := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	token, err := jwtToken.SignedString([]byte("secret"))
+	token, err, errorCode := service.Login(loginUser)
 
 	if err != nil {
-		return c.SendStatus(http.StatusInternalServerError)
+		return StatusError(c, HttpError{
+			Message:    err.Error(),
+			StatusCode: errorCode,
+		})
 	}
 
 	cookie := fiber.Cookie{
@@ -134,9 +82,7 @@ func login(c *fiber.Ctx) error {
 
 	c.Cookie(&cookie)
 
-	return StatusOk(c, fiber.Map{
-		"jwt": token,
-	})
+	return StatusOk(c, models.LoginResponse{Jwt: token})
 }
 
 // ShowUser godoc
@@ -145,7 +91,7 @@ func login(c *fiber.Ctx) error {
 // @Tags users
 // @Accept  json
 // @Produce  json
-// @Param id path int true "Account ID"
+// @Security ApiKeyAuth
 // @Success 200 {object} models.User
 // @Failure 400 {object} HttpError
 // @Router /api/auth/user [get]
@@ -169,8 +115,13 @@ func user(c *fiber.Ctx) error {
 
 	// fmt.Println(token.Claims)
 	id := claims.Issuer
-	var user models.User
-	database.DB.Where("id = ?", id).First(&user)
+	user, err, errCode := service.User(id)
+	if err != nil {
+		return StatusError(c, HttpError{
+			Message:    err.Error(),
+			StatusCode: errCode,
+		})
+	}
 
 	return StatusOk(c, user)
 }
