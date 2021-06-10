@@ -76,12 +76,21 @@ paths:
                       type: string
                     result:
                       type: object
+  /logout:
+    post:
+      summary: 'logout'
+      responses:
+        '200':
+          description: 'logout successfully'
+          content:
+            application/json:
+              schema:
+                type: object
   /user:
     get:
       security:
         - cookieAuth: []
       summary: 'get current login user'
-      operationId: listUser
       tags:
         - user
       responses:
