@@ -31,7 +31,10 @@ func register(c *fiber.Ctx) error {
 
 	var registerUser models.RegisterUser
 	if err := c.BodyParser(&registerUser); err != nil {
-		return StatusBadRequest(c, HttpError{Message: err.Error()})
+		return StatusError(c, HttpError{
+			Message:    err.Error(),
+			StatusCode: http.StatusBadRequest,
+		})
 	}
 
 	var user models.User
@@ -39,25 +42,29 @@ func register(c *fiber.Ctx) error {
 	if utils.ValidEmail(registerUser.Email) {
 		database.DB.Where("email = ?", registerUser.Email).First(&user)
 		if user.Id != 0 {
-			return StatusBadRequest(c, HttpError{
-				Message: "Email already in use",
+			return StatusError(c, HttpError{
+				Message:    "Email already in use",
+				StatusCode: http.StatusBadRequest,
 			})
 		}
 	} else {
-		return StatusBadRequest(c, HttpError{
-			Message: "Invalid email",
+		return StatusError(c, HttpError{
+			Message:    "Invalid email",
+			StatusCode: http.StatusBadRequest,
 		})
 	}
 
 	if !utils.ValidPassword(registerUser.Password) {
-		return StatusBadRequest(c, HttpError{
-			Message: "invalid password",
+		return StatusError(c, HttpError{
+			Message:    "invalid password",
+			StatusCode: http.StatusBadRequest,
 		})
 	}
 
 	if registerUser.Password != registerUser.ConfirmPass {
-		return StatusBadRequest(c, HttpError{
-			Message: "Passwords do not match",
+		return StatusError(c, HttpError{
+			Message:    "Passwords do not match",
+			StatusCode: http.StatusBadRequest,
 		})
 	}
 	password, _ := bcrypt.GenerateFromPassword([]byte(registerUser.Password), 14)
@@ -83,22 +90,25 @@ func register(c *fiber.Ctx) error {
 func login(c *fiber.Ctx) error {
 	var loginUser models.LoginUser
 	if err := c.BodyParser(&loginUser); err != nil {
-		return StatusBadRequest(c, HttpError{
-			Message: err.Error(),
+		return StatusError(c, HttpError{
+			Message:    err.Error(),
+			StatusCode: http.StatusBadRequest,
 		})
 	}
 
 	var dbUser models.User
 
 	if err := database.DB.Where("email = ?", loginUser.Email).First(&dbUser).Error; errors.Is(err, gorm.ErrRecordNotFound) {
-		return StatusNotFound(c, HttpError{
-			Message: "User not found",
+		return StatusError(c, HttpError{
+			Message:    "User not found",
+			StatusCode: http.StatusNotFound,
 		})
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(dbUser.Password), []byte(loginUser.Password)); err != nil {
-		return StatusBadRequest(c, HttpError{
-			Message: "Incorrect password",
+		return StatusError(c, HttpError{
+			Message:    "Incorrect password",
+			StatusCode: http.StatusBadRequest,
 		})
 	}
 
@@ -124,7 +134,7 @@ func login(c *fiber.Ctx) error {
 
 	c.Cookie(&cookie)
 
-	return c.JSON(fiber.Map{
+	return StatusOk(c, fiber.Map{
 		"jwt": token,
 	})
 }
@@ -151,8 +161,9 @@ func user(c *fiber.Ctx) error {
 
 	if err != nil || !token.Valid {
 		c.Status(http.StatusUnauthorized)
-		return c.JSON(fiber.Map{
-			"message": "unauthenticated",
+		return StatusError(c, HttpError{
+			Message:    "unauthenticated",
+			StatusCode: http.StatusForbidden,
 		})
 	}
 
@@ -196,15 +207,16 @@ func logout(c *fiber.Ctx) error {
 func forgot(c *fiber.Ctx) error {
 	var data map[string]string
 	if err := c.BodyParser(&data); err != nil {
-		c.Status(http.StatusInternalServerError)
-		return c.JSON(HttpError{Message: err.Error(), StatusCode: http.StatusInternalServerError})
+		return StatusError(c, HttpError{
+			Message:    err.Error(),
+			StatusCode: http.StatusInternalServerError,
+		})
 	}
 
 	email := data["email"]
 
 	if !utils.ValidEmail(email) {
-		c.Status(http.StatusBadRequest)
-		return c.JSON(HttpError{
+		return StatusError(c, HttpError{
 			Message:    "invalid email",
 			StatusCode: http.StatusBadRequest,
 		})
@@ -215,15 +227,14 @@ func forgot(c *fiber.Ctx) error {
 	res := database.DB.Model(&user).Where("email = ?", email).First(&user)
 
 	if res.Error != nil {
-		c.Status(http.StatusInternalServerError)
-		return c.JSON(HttpError{
+		return StatusError(c, HttpError{
 			Message:    "some error occur",
 			StatusCode: http.StatusInternalServerError,
 		})
 	}
 
 	if user.Email == "" {
-		return StatusNotFound(c, HttpError{
+		return StatusError(c, HttpError{
 			Message:    "email does not exist",
 			StatusCode: http.StatusNotFound,
 		})
@@ -272,25 +283,25 @@ func reset(c *fiber.Ctx) error {
 	}
 
 	if data["password"] != data["confirm_pass"] {
-		c.Status(400)
-		return c.JSON(fiber.Map{
-			"message": "Passwords do not match",
+		return StatusError(c, HttpError{
+			Message:    "Passwords do not match",
+			StatusCode: http.StatusBadRequest,
 		})
 	}
 
 	var passwordReset = models.PasswordReset{}
 
 	if res := database.DB.Where("token = ?", data["token"]).Last(&passwordReset); res.Error != nil {
-		c.Status(http.StatusBadRequest)
-		return c.JSON(fiber.Map{
-			"message": "Invalid token!",
+		return StatusError(c, HttpError{
+			Message:    "Invalid token!",
+			StatusCode: http.StatusBadRequest,
 		})
 	}
 
 	password, _ := bcrypt.GenerateFromPassword([]byte(data["password"]), 14)
 	database.DB.Model(&models.User{}).Where("email = ?", passwordReset.Email).Update("password", password)
 
-	return c.JSON(fiber.Map{
+	return StatusOk(c, fiber.Map{
 		"message": "success",
 	})
 }

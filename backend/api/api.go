@@ -25,19 +25,14 @@ func StatusOk(c *fiber.Ctx, json interface{}) error {
 	return c.JSON(json)
 }
 
+func StatusError(c *fiber.Ctx, httpError HttpError) error {
+	c.Status(httpError.StatusCode)
+	return c.JSON(httpError)
+}
+
 func StatusCreated(c *fiber.Ctx, json interface{}) error {
 	c.Status(http.StatusCreated)
 	return c.JSON(json)
-}
-
-func StatusBadRequest(c *fiber.Ctx, appError HttpError) error {
-	c.Status(http.StatusBadRequest)
-	return c.JSON(appError)
-}
-
-func StatusNotFound(c *fiber.Ctx, appError HttpError) error {
-	c.Status(http.StatusNotFound)
-	return c.JSON(appError)
 }
 
 // Init
