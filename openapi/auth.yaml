@@ -3,9 +3,9 @@ info:
   version: 0.0.1
   title: learn godorp
 servers:
-  - url: 'http://localhost:8080/api'
+  - url: 'http://localhost:8080/api/auth'
 paths:
-  /auth/register:
+  /register:
     post:
       summary: 'register a new account'
       requestBody:
@@ -31,7 +31,7 @@ paths:
                     type: object
                     items:
                       $ref: '#/components/schemas/User'
-  /auth/login:
+  /login:
     post:
       summary: 'login'
       requestBody:
@@ -78,6 +78,8 @@ paths:
                       type: object
   /user:
     get:
+      security:
+        - cookieAuth: []
       summary: 'Sample endpoint: Returns details about a particular user'
       operationId: listUser
       tags:
@@ -125,10 +127,13 @@ components:
           type: string
         email:
           type: string
+          example: bing5@dep.chai
         password:
           type: string
+          example: Bingvip69
         confirmPass:
           type: string
+          example: Bingvip69
     LoginUser:
       type: object
       required:
@@ -177,3 +182,8 @@ components:
           format: int32
         message:
           type: string
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: jwt
