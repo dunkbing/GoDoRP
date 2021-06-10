@@ -22,17 +22,26 @@ const PrefixApi = "api"
 
 func StatusOk(c *fiber.Ctx, json interface{}) error {
 	c.Status(http.StatusOK)
-	return c.JSON(json)
+	return c.JSON(fiber.Map{
+		"status": "success",
+		"result": json,
+	})
 }
 
 func StatusError(c *fiber.Ctx, httpError HttpError) error {
 	c.Status(httpError.StatusCode)
-	return c.JSON(httpError)
+	return c.JSON(fiber.Map{
+		"status": "failed",
+		"result": httpError,
+	})
 }
 
 func StatusCreated(c *fiber.Ctx, json interface{}) error {
 	c.Status(http.StatusCreated)
-	return c.JSON(json)
+	return c.JSON(fiber.Map{
+		"status": "success",
+		"result": json,
+	})
 }
 
 // Init
