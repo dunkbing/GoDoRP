@@ -164,6 +164,11 @@ func user(c *fiber.Ctx) error {
 	return StatusOk(c, user)
 }
 
+// @Summary Logout
+// @Tags logout
+// @Produce json
+// @Success 200 {object} interface{}
+// @Router /api/auth/logout [post]
 func logout(c *fiber.Ctx) error {
 	cookie := fiber.Cookie{
 		Name:     "jwt",
@@ -174,18 +179,25 @@ func logout(c *fiber.Ctx) error {
 
 	c.Cookie(&cookie)
 
-	return c.JSON(fiber.Map{
+	return StatusOk(c, fiber.Map{
 		"message": "success",
 	})
 }
 
+// @Summary Forgot password
+// @Tags forgot
+// @Accept json
+// @Produce json
+// @Success 200 {object} interface{}
+// @Failure 500 {object} AppError
+// @Failure 400 {object} AppError
+// @Failure 404 {object} AppError
+// @Router /api/auth/forgot [post]
 func forgot(c *fiber.Ctx) error {
 	var data map[string]string
 	if err := c.BodyParser(&data); err != nil {
 		c.Status(http.StatusInternalServerError)
-		return c.JSON(fiber.Map{
-			"message": err.Error(),
-		})
+		return c.JSON(AppError{Message: err.Error(), StatusCode: http.StatusInternalServerError})
 	}
 
 	email := data["email"]
@@ -204,15 +216,16 @@ func forgot(c *fiber.Ctx) error {
 
 	if res.Error != nil {
 		c.Status(http.StatusInternalServerError)
-		return c.JSON(fiber.Map{
-			"message": "some error occur",
+		return c.JSON(AppError{
+			Message:    "some error occur",
+			StatusCode: http.StatusInternalServerError,
 		})
 	}
 
 	if user.Email == "" {
-		c.Status(http.StatusNotFound)
-		return c.JSON(fiber.Map{
-			"message": "email does not exist",
+		return StatusNotFound(c, AppError{
+			Message:    "email does not exist",
+			StatusCode: http.StatusNotFound,
 		})
 	}
 
@@ -245,6 +258,13 @@ func forgot(c *fiber.Ctx) error {
 	})
 }
 
+// @Summary Reset password
+// @Tags reset
+// @Accept json
+// @Produce json
+// @Success 200 {object} interface{}
+// @Failure 400 {object} AppError
+// @Router /api/auth/reset [post]
 func reset(c *fiber.Ctx) error {
 	var data map[string]string
 	if err := c.BodyParser(&data); err != nil {
