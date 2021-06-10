@@ -1,6 +1,8 @@
 package api
 
 import (
+	swagger "github.com/arsmn/fiber-swagger/v2"
+	_ "github.com/dunkbing/sfw-checker-viet/backend/docs"
 	"net/http"
 
 	"github.com/gofiber/fiber/v2"
@@ -38,11 +40,15 @@ func StatusNotFound(c *fiber.Ctx, appError AppError) error {
 	return c.JSON(appError)
 }
 
+// Init
+// @BasePath /api
 func Init(app *fiber.App) {
 	api := &API{
 		app:        app,
 		BaseRoutes: &Routes{},
 	}
+
+	app.Get("/swagger/*", swagger.Handler)
 
 	api.BaseRoutes.ApiRoot = app.Group(PrefixApi)
 	api.BaseRoutes.Auth = api.BaseRoutes.ApiRoot.Group("auth")

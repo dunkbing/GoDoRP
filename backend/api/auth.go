@@ -18,16 +18,26 @@ import (
 	"gorm.io/gorm"
 )
 
+// @Summary Register a new user.
+// @Description Register a new user.
+// @Tags register
+// @Accept json
+// @Produce json
+// @Param user body models.RegisterUser true "register user"
+// @Success 201 {object} models.User
+// @Failure 400 {object} AppError
+// @Router /api/auth/register [post]
 func register(c *fiber.Ctx) error {
-	var data map[string]string
-	if err := c.BodyParser(&data); err != nil {
-		return err
+
+	var registerUser models.RegisterUser
+	if err := c.BodyParser(&registerUser); err != nil {
+		return StatusBadRequest(c, AppError{Message: err.Error()})
 	}
 
 	var user models.User
 
-	if utils.ValidEmail(data["email"]) {
-		database.DB.Where("email = ?", data["email"]).First(&user)
+	if utils.ValidEmail(registerUser.Email) {
+		database.DB.Where("email = ?", registerUser.Email).First(&user)
 		if user.Id != 0 {
 			return StatusBadRequest(c, AppError{
 				Message: "Email already in use",
@@ -39,21 +49,21 @@ func register(c *fiber.Ctx) error {
 		})
 	}
 
-	if !utils.ValidPassword(data["password"]) {
+	if !utils.ValidPassword(registerUser.Password) {
 		return StatusBadRequest(c, AppError{
 			Message: "invalid password",
 		})
 	}
 
-	if data["password"] != data["confirm_pass"] {
+	if registerUser.Password != registerUser.ConfirmPass {
 		return StatusBadRequest(c, AppError{
 			Message: "Passwords do not match",
 		})
 	}
-	password, _ := bcrypt.GenerateFromPassword([]byte(data["password"]), 14)
-	user.FirstName = data["first_name"]
-	user.LastName = data["last_name"]
-	user.Email = data["email"]
+	password, _ := bcrypt.GenerateFromPassword([]byte(registerUser.Password), 14)
+	user.FirstName = registerUser.FirstName
+	user.LastName = registerUser.LastName
+	user.Email = registerUser.Email
 	user.Password = string(password)
 
 	database.DB.Create(&user)
@@ -61,32 +71,41 @@ func register(c *fiber.Ctx) error {
 	return StatusCreated(c, user)
 }
 
+// @Summary Login to user
+// @Description login.
+// @Tags login
+// @Accept json
+// @Produce json
+// @Param user body models.User true "login user"
+// @Success 201 {object} models.User
+// @Failure 400 {object} interface{}
+// @Router /api/auth/login [post]
 func login(c *fiber.Ctx) error {
-	var data map[string]string
-	if err := c.BodyParser(&data); err != nil {
+	var loginUser models.LoginUser
+	if err := c.BodyParser(&loginUser); err != nil {
 		return StatusBadRequest(c, AppError{
 			Message: err.Error(),
 		})
 	}
 
-	var user models.User
+	var dbUser models.User
 
-	if err := database.DB.Where("email = ?", data["email"]).First(&user).Error; errors.Is(err, gorm.ErrRecordNotFound) {
+	if err := database.DB.Where("email = ?", loginUser.Email).First(&dbUser).Error; errors.Is(err, gorm.ErrRecordNotFound) {
 		return StatusNotFound(c, AppError{
 			Message: "User not found",
 		})
 	}
 
-	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(data["password"])); err != nil {
+	if err := bcrypt.CompareHashAndPassword([]byte(dbUser.Password), []byte(loginUser.Password)); err != nil {
 		return StatusBadRequest(c, AppError{
 			Message: "Incorrect password",
 		})
 	}
 
 	claims := jwt.StandardClaims{
-		Id:        string(int32(user.Id)),
+		Id:        string(int32(dbUser.Id)),
 		ExpiresAt: time.Now().Add(time.Hour * 24).Unix(),
-		Issuer:    strconv.FormatInt(int64(user.Id), 10),
+		Issuer:    strconv.FormatInt(int64(dbUser.Id), 10),
 	}
 
 	jwtToken := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
@@ -110,6 +129,16 @@ func login(c *fiber.Ctx) error {
 	})
 }
 
+// ShowUser godoc
+// @Summary Show current user
+// @Description get current user
+// @Tags users
+// @Accept  json
+// @Produce  json
+// @Param id path int true "Account ID"
+// @Success 200 {object} models.User
+// @Failure 400 {object} AppError
+// @Router /api/auth/user [get]
 func user(c *fiber.Ctx) error {
 	cookie := c.Cookies("jwt")
 
