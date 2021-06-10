@@ -19,7 +19,7 @@ paths:
               type: string
       responses:
         '201':
-          description: 'details of the new account'
+          description: 'new user created'
           content:
             application/json:
               schema:
@@ -27,9 +27,48 @@ paths:
   /auth/login:
     post:
       summary: 'login'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginUser'
       responses:
           '200':
-            description: 'new user created'
+            description: 'login success'
+            content:
+              application/json:
+                schema:
+                  type: object
+                  properties:
+                    status:
+                      type: string
+                    result:
+                      type: object
+                      items: 
+                        $ref: '#/components/schemas/LoginResponse'
+          '400':
+            description: 'incorrect password'
+            content:
+              application/json:
+                schema:
+                  type: object
+                  properties:
+                    status:
+                      type: string
+                    result:
+                      type: object
+          '404':
+            description: 'user not found'
+            content:
+              application/json:
+                schema:
+                  type: object
+                  properties:
+                    status:
+                      type: string
+                    result:
+                      type: object
   /user:
     get:
       summary: 'Sample endpoint: Returns details about a particular user'
@@ -82,6 +121,23 @@ components:
         password:
           type: string
         confirmPass:
+          type: string
+    LoginUser:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+    LoginResponse:
+      type: object
+      required:
+        - jwt
+      properties:
+        jwt:
           type: string
     User:
       type: object
