@@ -30,12 +30,12 @@ func StatusCreated(c *fiber.Ctx, json interface{}) error {
 	return c.JSON(json)
 }
 
-func StatusBadRequest(c *fiber.Ctx, appError AppError) error {
+func StatusBadRequest(c *fiber.Ctx, appError HttpError) error {
 	c.Status(http.StatusBadRequest)
 	return c.JSON(appError)
 }
 
-func StatusNotFound(c *fiber.Ctx, appError AppError) error {
+func StatusNotFound(c *fiber.Ctx, appError HttpError) error {
 	c.Status(http.StatusNotFound)
 	return c.JSON(appError)
 }

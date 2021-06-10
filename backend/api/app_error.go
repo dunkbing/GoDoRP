@@ -1,6 +1,6 @@
 package api
 
-type AppError struct {
+type HttpError struct {
 	Id            string `json:"id,omitempty"`
 	Message       string `json:"message"`                  // Message to be display to the end user without debugging information
 	DetailedError string `json:"detailed_error,omitempty"` // Internal error string to help the developer
@@ -11,6 +11,6 @@ type AppError struct {
 	// params        map[string]interface{}
 }
 
-func (er *AppError) Error() string {
+func (er *HttpError) Error() string {
 	return er.Where + ": " + er.Message + ", " + er.DetailedError
 }

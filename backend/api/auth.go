@@ -25,13 +25,13 @@ import (
 // @Produce json
 // @Param user body models.RegisterUser true "register user"
 // @Success 201 {object} models.User
-// @Failure 400 {object} AppError
+// @Failure 400 {object} HttpError
 // @Router /api/auth/register [post]
 func register(c *fiber.Ctx) error {
 
 	var registerUser models.RegisterUser
 	if err := c.BodyParser(&registerUser); err != nil {
-		return StatusBadRequest(c, AppError{Message: err.Error()})
+		return StatusBadRequest(c, HttpError{Message: err.Error()})
 	}
 
 	var user models.User
@@ -39,24 +39,24 @@ func register(c *fiber.Ctx) error {
 	if utils.ValidEmail(registerUser.Email) {
 		database.DB.Where("email = ?", registerUser.Email).First(&user)
 		if user.Id != 0 {
-			return StatusBadRequest(c, AppError{
+			return StatusBadRequest(c, HttpError{
 				Message: "Email already in use",
 			})
 		}
 	} else {
-		return StatusBadRequest(c, AppError{
+		return StatusBadRequest(c, HttpError{
 			Message: "Invalid email",
 		})
 	}
 
 	if !utils.ValidPassword(registerUser.Password) {
-		return StatusBadRequest(c, AppError{
+		return StatusBadRequest(c, HttpError{
 			Message: "invalid password",
 		})
 	}
 
 	if registerUser.Password != registerUser.ConfirmPass {
-		return StatusBadRequest(c, AppError{
+		return StatusBadRequest(c, HttpError{
 			Message: "Passwords do not match",
 		})
 	}
@@ -83,7 +83,7 @@ func register(c *fiber.Ctx) error {
 func login(c *fiber.Ctx) error {
 	var loginUser models.LoginUser
 	if err := c.BodyParser(&loginUser); err != nil {
-		return StatusBadRequest(c, AppError{
+		return StatusBadRequest(c, HttpError{
 			Message: err.Error(),
 		})
 	}
@@ -91,13 +91,13 @@ func login(c *fiber.Ctx) error {
 	var dbUser models.User
 
 	if err := database.DB.Where("email = ?", loginUser.Email).First(&dbUser).Error; errors.Is(err, gorm.ErrRecordNotFound) {
-		return StatusNotFound(c, AppError{
+		return StatusNotFound(c, HttpError{
 			Message: "User not found",
 		})
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(dbUser.Password), []byte(loginUser.Password)); err != nil {
-		return StatusBadRequest(c, AppError{
+		return StatusBadRequest(c, HttpError{
 			Message: "Incorrect password",
 		})
 	}
@@ -137,7 +137,7 @@ func login(c *fiber.Ctx) error {
 // @Produce  json
 // @Param id path int true "Account ID"
 // @Success 200 {object} models.User
-// @Failure 400 {object} AppError
+// @Failure 400 {object} HttpError
 // @Router /api/auth/user [get]
 func user(c *fiber.Ctx) error {
 	cookie := c.Cookies("jwt")
@@ -189,22 +189,22 @@ func logout(c *fiber.Ctx) error {
 // @Accept json
 // @Produce json
 // @Success 200 {object} interface{}
-// @Failure 500 {object} AppError
-// @Failure 400 {object} AppError
-// @Failure 404 {object} AppError
+// @Failure 500 {object} HttpError
+// @Failure 400 {object} HttpError
+// @Failure 404 {object} HttpError
 // @Router /api/auth/forgot [post]
 func forgot(c *fiber.Ctx) error {
 	var data map[string]string
 	if err := c.BodyParser(&data); err != nil {
 		c.Status(http.StatusInternalServerError)
-		return c.JSON(AppError{Message: err.Error(), StatusCode: http.StatusInternalServerError})
+		return c.JSON(HttpError{Message: err.Error(), StatusCode: http.StatusInternalServerError})
 	}
 
 	email := data["email"]
 
 	if !utils.ValidEmail(email) {
 		c.Status(http.StatusBadRequest)
-		return c.JSON(AppError{
+		return c.JSON(HttpError{
 			Message:    "invalid email",
 			StatusCode: http.StatusBadRequest,
 		})
@@ -216,14 +216,14 @@ func forgot(c *fiber.Ctx) error {
 
 	if res.Error != nil {
 		c.Status(http.StatusInternalServerError)
-		return c.JSON(AppError{
+		return c.JSON(HttpError{
 			Message:    "some error occur",
 			StatusCode: http.StatusInternalServerError,
 		})
 	}
 
 	if user.Email == "" {
-		return StatusNotFound(c, AppError{
+		return StatusNotFound(c, HttpError{
 			Message:    "email does not exist",
 			StatusCode: http.StatusNotFound,
 		})
@@ -263,7 +263,7 @@ func forgot(c *fiber.Ctx) error {
 // @Accept json
 // @Produce json
 // @Success 200 {object} interface{}
-// @Failure 400 {object} AppError
+// @Failure 400 {object} HttpError
 // @Router /api/auth/reset [post]
 func reset(c *fiber.Ctx) error {
 	var data map[string]string
