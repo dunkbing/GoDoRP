@@ -113,6 +113,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+        '403':
+          description: 'unauthenticated'
+          content:
+            application/json:
+              schema:
+                type: object
 components:
   schemas:
     RegisterUser:
