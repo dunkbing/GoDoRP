@@ -21,10 +21,7 @@ run:
 	./$(BINARY_NAME)
 deps:
 	$(GO_GET)
+
 swagger:
 	swag init
-
-
-# Cross compilation
-# build-linux:
-	# CGO_ENABLED=0 GOOS=linux GOARCH=amd64 $(GO_BUILD) -o $(BINARY_UNIX) -v
+	@echo done
