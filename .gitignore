@@ -5,3 +5,5 @@
 *.exe
 # env file
 .env
+# misc
+.vscode

@@ -2,10 +2,11 @@
 .git
 .gitignore
 .editorconfig
-README.md
+*.md
 # node
 node_modules
 npm-debug.log
+build
 # docker
 *Dockerfile*
 *docker-compose*

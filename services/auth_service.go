@@ -13,7 +13,7 @@ import (
 	"gorm.io/gorm"
 )
 
-type authService struct {}
+type authService struct{}
 
 func (authService) Register(registerUser models.RegisterUser) (models.User, error) {
 	var dbUser models.User
@@ -50,14 +50,14 @@ func (authService) Login(loginUser models.LoginUser) (string, *HttpError) {
 
 	if err := Database.Where("email = ?", loginUser.Email).First(&dbUser).Error; errors.Is(err, gorm.ErrRecordNotFound) {
 		return "", &HttpError{
-			Message: "user not found",
+			Message:    "user not found",
 			StatusCode: http.StatusNotFound,
 		}
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(dbUser.Password), []byte(loginUser.Password)); err != nil {
 		return "", &HttpError{
-			Message: "incorrect password",
+			Message:    "incorrect password",
 			StatusCode: http.StatusBadRequest,
 		}
 	}
@@ -82,7 +82,7 @@ func (authService) User(id string) (models.User, *HttpError) {
 
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return user, &HttpError{
-			Message: "User not found",
+			Message:    "User not found",
 			StatusCode: http.StatusNotFound,
 		}
 	}

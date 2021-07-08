@@ -5,7 +5,8 @@ import App from './App';
 import reportWebVitals from './reportWebVitals';
 import axios from 'axios';
 
-axios.defaults.baseURL = 'http://localhost:8080/api/';
+const { protocol, hostname } = window.location;
+axios.defaults.baseURL = `${protocol}//${hostname}/api`;
 axios.defaults.withCredentials = true;
 
 ReactDOM.render(

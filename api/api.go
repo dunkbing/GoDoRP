@@ -19,7 +19,7 @@ type Api struct {
 	BaseRoutes *Routes
 }
 
-func New() *Api{
+func New() *Api {
 	return &Api{}
 }
 

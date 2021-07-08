@@ -33,7 +33,7 @@ const Register: React.FC = () => {
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const response = await axios.post<RegisterAccount>('register', {
+    const response = await axios.post<RegisterAccount>('auth/register', {
       first_name: account.firstName,
       last_name: account.lastName,
       email: account.email,

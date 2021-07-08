@@ -1,14 +1,17 @@
 # Build the Go Api
 FROM golang:latest AS builder
-ADD . /app
+# ADD . /app
 WORKDIR /app
+COPY go.* ./
 RUN go mod download
+COPY . .
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-w" -a -o /main .
 
 # Build the React application
 FROM node:alpine AS node_builder
 COPY --from=builder /app/frontend/package*.json ./
-RUN npm install
+ENV NODE_ENV=production
+RUN npm install --production
 COPY --from=builder /app/frontend/ ./
 RUN npm run build
 
