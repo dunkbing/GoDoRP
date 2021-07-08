@@ -174,7 +174,7 @@ func forgot(c *fiber.Ctx) error {
 
 	var user models.User
 
-	res := service.DB.Model(&user).Where("email = ?", email).First(&user)
+	res := service.Database.Model(&user).Where("email = ?", email).First(&user)
 
 	if res.Error != nil {
 		return StatusError(c, HttpError{
@@ -197,7 +197,7 @@ func forgot(c *fiber.Ctx) error {
 		Token: token,
 	}
 
-	service.DB.Create(&passwordReset)
+	service.Database.Create(&passwordReset)
 
 	from := "admin@dunkbing.com"
 	to := []string{
@@ -241,7 +241,7 @@ func reset(c *fiber.Ctx) error {
 
 	var passwordReset = models.PasswordReset{}
 
-	if res := service.DB.Where("token = ?", data["token"]).Last(&passwordReset); res.Error != nil {
+	if res := service.Database.Where("token = ?", data["token"]).Last(&passwordReset); res.Error != nil {
 		return StatusError(c, HttpError{
 			Message:    "Invalid token!",
 			StatusCode: http.StatusBadRequest,
@@ -249,7 +249,7 @@ func reset(c *fiber.Ctx) error {
 	}
 
 	password, _ := bcrypt.GenerateFromPassword([]byte(data["password"]), 14)
-	service.DB.Model(&models.User{}).Where("email = ?", passwordReset.Email).Update("password", password)
+	service.Database.Model(&models.User{}).Where("email = ?", passwordReset.Email).Update("password", password)
 
 	return StatusOk(c, fiber.Map{
 		"message": "success",

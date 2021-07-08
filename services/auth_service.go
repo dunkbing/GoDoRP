@@ -4,6 +4,7 @@ import (
 	"errors"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/dunkbing/sfw-checker-viet/backend/models"
+	"github.com/dunkbing/sfw-checker-viet/backend/api"
 	"github.com/dunkbing/sfw-checker-viet/backend/utils"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
@@ -16,7 +17,7 @@ func Register(registerUser models.RegisterUser) (models.User, error) {
 	var dbUser models.User
 
 	if utils.ValidEmail(registerUser.Email) {
-		DB.Where("email = ?", registerUser.Email).First(&dbUser)
+		Database.Where("email = ?", registerUser.Email).First(&dbUser)
 		if dbUser.Id != 0 {
 			return dbUser, errors.New("email already in use")
 		}
@@ -37,15 +38,15 @@ func Register(registerUser models.RegisterUser) (models.User, error) {
 	dbUser.Email = registerUser.Email
 	dbUser.Password = string(password)
 
-	DB.Create(&dbUser)
+	Database.Create(&dbUser)
 
 	return dbUser, nil
 }
 
-func Login(loginUser models.LoginUser) (string, error, int) {
+func Login(loginUser models.LoginUser) (string, api.HttpError) {
 	var dbUser models.User
 
-	if err := DB.Where("email = ?", loginUser.Email).First(&dbUser).Error; errors.Is(err, gorm.ErrRecordNotFound) {
+	if err := Database.Where("email = ?", loginUser.Email).First(&dbUser).Error; errors.Is(err, gorm.ErrRecordNotFound) {
 		return "", errors.New("user not found"), http.StatusNotFound
 	}
 
@@ -66,7 +67,7 @@ func Login(loginUser models.LoginUser) (string, error, int) {
 
 func User(id string) (models.User, error, int) {
 	var user models.User
-	res := DB.Where("id = ?", id).First(&user)
+	res := Database.Where("id = ?", id).First(&user)
 	err := res.Error
 
 	if errors.Is(err, gorm.ErrRecordNotFound) {

@@ -10,7 +10,7 @@ import (
 	"gorm.io/gorm/logger"
 )
 
-var DB *gorm.DB
+var Database *gorm.DB
 
 func Connect() {
 	var (
@@ -28,7 +28,7 @@ func Connect() {
 		panic("couldn't connect to the database")
 	}
 
-	DB = db
+	Database = db
 
 	err = db.AutoMigrate(&models.User{}, &models.PasswordReset{})
 	if err != nil {
@@ -37,11 +37,11 @@ func Connect() {
 }
 
 func Close() {
-	if DB == nil {
+	if Database == nil {
 		return
 	}
 
-	sqlDb, err := DB.DB()
+	sqlDb, err := Database.DB()
 	if err != nil {
 		panic(err.Error())
 	}
