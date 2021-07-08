@@ -11,7 +11,7 @@ import (
 func main() {
 	_ = godotenv.Load()
 
-	// database.Connect()
+	database.Connect()
 	defer database.Close()
 
 	app := fiber.New()

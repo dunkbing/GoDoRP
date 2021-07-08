@@ -34,11 +34,11 @@ const Register: React.FC = () => {
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const response = await axios.post<RegisterAccount>('auth/register', {
-      first_name: account.firstName,
-      last_name: account.lastName,
+      firstName: account.firstName,
+      lastName: account.lastName,
       email: account.email,
       password: account.password,
-      confirm_pass: account.confirmPass,
+      confirmPass: account.confirmPass,
     });
     if (response.status === 200) {
       setRedirect(true);

@@ -6,6 +6,7 @@ import (
 
 	"github.com/dunkbing/sfw-checker-viet/backend/models"
 	"gorm.io/driver/postgres"
+	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 )
@@ -25,7 +26,7 @@ func Connect() {
 		Logger: logger.Default.LogMode(logger.Info),
 	})
 	if err != nil {
-		panic("couldn't connect to the database")
+		db, _ = gorm.Open(sqlite.Open("test.db"), &gorm.Config{})
 	}
 
 	Database = db

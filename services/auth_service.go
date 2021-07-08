@@ -2,6 +2,7 @@ package service
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
 	"time"
@@ -32,6 +33,7 @@ func (authService) Register(registerUser models.RegisterUser) (models.User, erro
 	}
 
 	if registerUser.Password != registerUser.ConfirmPass {
+		fmt.Println(registerUser)
 		return dbUser, errors.New("passwords do not match")
 	}
 	password, _ := bcrypt.GenerateFromPassword([]byte(registerUser.Password), 14)

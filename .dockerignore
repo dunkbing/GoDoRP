@@ -16,3 +16,4 @@ vendor/
 # misc
 Makefile
 *example*
+database

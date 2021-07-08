@@ -2,9 +2,9 @@ version: '3.7'
 services:
   postgres:
     container_name: pg_container
-    build: ./db
+    build: ./database
     volumes:
-      - ./db/pgdata:/pgdata
+      - ./database/pgdata:/pgdata
     ports:
       - 5432:5432
     env_file: .env
