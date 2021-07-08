@@ -2,97 +2,74 @@ package api
 
 import (
 	"fmt"
-	"strconv"
 	"time"
 
 	"net/http"
 	"net/smtp"
 
 	"github.com/dgrijalva/jwt-go"
-	"github.com/dunkbing/sfw-checker-viet/backend/database"
 	"github.com/dunkbing/sfw-checker-viet/backend/models"
+	service "github.com/dunkbing/sfw-checker-viet/backend/services"
 	"github.com/dunkbing/sfw-checker-viet/backend/utils"
 	"github.com/gofiber/fiber/v2"
 	"golang.org/x/crypto/bcrypt"
 )
 
+// @Summary Register a new user.
+// @Description Register a new user.
+// @Tags register
+// @Accept json
+// @Produce json
+// @Param user body models.RegisterUser true "register user"
+// @Success 201 {object} models.User
+// @Failure 400 {object} HttpError
+// @Router /api/auth/register [post]
 func register(c *fiber.Ctx) error {
-	var data map[string]string
-	if err := c.BodyParser(&data); err != nil {
-		return err
-	}
-
-	var user models.User
-
-	if utils.ValidEmail(data["email"]) {
-		database.DB.Where("email = ?", data["email"]).First(&user)
-		if user.Id != 0 {
-			return StatusBadRequest(c, AppError{
-				Message: "Email already in use",
-			})
-		}
-	} else {
-		return StatusBadRequest(c, AppError{
-			Message: "Invalid email",
+	var registerUser models.RegisterUser
+	if err := c.BodyParser(&registerUser); err != nil {
+		return StatusError(c, HttpError{
+			Message:    err.Error(),
+			StatusCode: http.StatusBadRequest,
 		})
 	}
 
-	if !utils.ValidPassword(data["password"]) {
-		return StatusBadRequest(c, AppError{
-			Message: "invalid password",
-		})
-	}
-
-	if data["password"] != data["confirm_pass"] {
-		return StatusBadRequest(c, AppError{
-			Message: "Passwords do not match",
-		})
-	}
-	password, _ := bcrypt.GenerateFromPassword([]byte(data["password"]), 14)
-	user.FirstName = data["first_name"]
-	user.LastName = data["last_name"]
-	user.Email = data["email"]
-	user.Password = string(password)
-
-	database.DB.Create(&user)
-
-	return StatusCreated(c, user)
-}
-
-func login(c *fiber.Ctx) error {
-	var data map[string]string
-	if err := c.BodyParser(&data); err != nil {
-		return StatusBadRequest(c, AppError{
-			Message: err.Error(),
-		})
-	}
-
-	var user models.User
-	database.DB.Where("email = ?", data["email"]).First(&user)
-
-	if user.Id == 0 {
-		return StatusNotFound(c, AppError{
-			Message: "User not found",
-		})
-	}
-
-	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(data["password"])); err != nil {
-		return StatusBadRequest(c, AppError{
-			Message: "Incorrect password",
-		})
-	}
-
-	claims := jwt.StandardClaims{
-		Id:        string(int32(user.Id)),
-		ExpiresAt: time.Now().Add(time.Hour * 24).Unix(),
-		Issuer:    strconv.FormatInt(int64(user.Id), 10),
-	}
-
-	jwtToken := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	token, err := jwtToken.SignedString([]byte("secret"))
+	dbUser, err := service.Register(registerUser)
 
 	if err != nil {
-		return c.SendStatus(http.StatusInternalServerError)
+		return StatusError(c, HttpError{
+			Message:    err.Error(),
+			StatusCode: http.StatusBadRequest,
+		})
+	}
+
+	return StatusCreated(c, dbUser)
+}
+
+// @Summary Login to user
+// @Description login.
+// @Tags login
+// @Accept json
+// @Produce json
+// @Param user body models.LoginUser true "login user"
+// @Success 200 {object} models.LoginResponse
+// @Failure 400 {object} interface{}
+// @Router /api/auth/login [post]
+func login(c *fiber.Ctx) error {
+	var loginUser models.LoginUser
+	if err := c.BodyParser(&loginUser); err != nil {
+		return StatusError(c, HttpError{
+			Message:    err.Error(),
+			StatusCode: http.StatusBadRequest,
+		})
+	}
+
+	token, err, errorCode := service.Login(loginUser)
+
+	if err != nil {
+		return StatusError(c, HttpError{
+			Message:    err.Error(),
+			StatusCode: errorCode,
+		})
 	}
 
 	cookie := fiber.Cookie{
@@ -104,11 +81,19 @@ func login(c *fiber.Ctx) error {
 
 	c.Cookie(&cookie)
 
-	return c.JSON(fiber.Map{
-		"jwt": token,
-	})
+	return StatusOk(c, models.LoginResponse{Jwt: token})
 }
 
+// ShowUser godoc
+// @Summary Show current user
+// @Description get current user
+// @Tags users
+// @Accept  json
+// @Produce  json
+// @Security ApiKeyAuth
+// @Success 200 {object} models.User
+// @Failure 400 {object} HttpError
+// @Router /api/auth/user [get]
 func user(c *fiber.Ctx) error {
 	cookie := c.Cookies("jwt")
 
@@ -121,19 +106,30 @@ func user(c *fiber.Ctx) error {
 
 	if err != nil || !token.Valid {
 		c.Status(http.StatusUnauthorized)
-		return c.JSON(fiber.Map{
-			"message": "unauthenticated",
+		return StatusError(c, HttpError{
+			Message:    "unauthenticated",
+			StatusCode: http.StatusForbidden,
 		})
 	}
 
 	// fmt.Println(token.Claims)
 	id := claims.Issuer
-	var user models.User
-	database.DB.Where("id = ?", id).First(&user)
+	user, err, errCode := service.User(id)
+	if err != nil {
+		return StatusError(c, HttpError{
+			Message:    err.Error(),
+			StatusCode: errCode,
+		})
+	}
 
 	return StatusOk(c, user)
 }
 
+// @Summary Logout
+// @Tags logout
+// @Produce json
+// @Success 200 {object} interface{}
+// @Router /api/auth/logout [post]
 func logout(c *fiber.Ctx) error {
 	cookie := fiber.Cookie{
 		Name:     "jwt",
@@ -144,25 +140,33 @@ func logout(c *fiber.Ctx) error {
 
 	c.Cookie(&cookie)
 
-	return c.JSON(fiber.Map{
+	return StatusOk(c, fiber.Map{
 		"message": "success",
 	})
 }
 
+// @Summary Forgot password
+// @Tags forgot
+// @Accept json
+// @Produce json
+// @Success 200 {object} interface{}
+// @Failure 500 {object} HttpError
+// @Failure 400 {object} HttpError
+// @Failure 404 {object} HttpError
+// @Router /api/auth/forgot [post]
 func forgot(c *fiber.Ctx) error {
 	var data map[string]string
 	if err := c.BodyParser(&data); err != nil {
-		c.Status(http.StatusInternalServerError)
-		return c.JSON(fiber.Map{
-			"message": err.Error(),
+		return StatusError(c, HttpError{
+			Message:    err.Error(),
+			StatusCode: http.StatusInternalServerError,
 		})
 	}
 
 	email := data["email"]
 
 	if !utils.ValidEmail(email) {
-		c.Status(http.StatusBadRequest)
-		return c.JSON(AppError{
+		return StatusError(c, HttpError{
 			Message:    "invalid email",
 			StatusCode: http.StatusBadRequest,
 		})
@@ -170,19 +174,19 @@ func forgot(c *fiber.Ctx) error {
 
 	var user models.User
 
-	res := database.DB.Model(&user).Where("email = ?", email).First(&user)
+	res := service.DB.Model(&user).Where("email = ?", email).First(&user)
 
 	if res.Error != nil {
-		c.Status(http.StatusInternalServerError)
-		c.JSON(fiber.Map{
-			"message": "some error occur",
+		return StatusError(c, HttpError{
+			Message:    "some error occur",
+			StatusCode: http.StatusInternalServerError,
 		})
 	}
 
 	if user.Email == "" {
-		c.Status(http.StatusNotFound)
-		return c.JSON(fiber.Map{
-			"message": "email does not exist",
+		return StatusError(c, HttpError{
+			Message:    "email does not exist",
+			StatusCode: http.StatusNotFound,
 		})
 	}
 
@@ -193,7 +197,7 @@ func forgot(c *fiber.Ctx) error {
 		Token: token,
 	}
 
-	database.DB.Create(&passwordReset)
+	service.DB.Create(&passwordReset)
 
 	from := "admin@dunkbing.com"
 	to := []string{
@@ -215,6 +219,13 @@ func forgot(c *fiber.Ctx) error {
 	})
 }
 
+// @Summary Reset password
+// @Tags reset
+// @Accept json
+// @Produce json
+// @Success 200 {object} interface{}
+// @Failure 400 {object} HttpError
+// @Router /api/auth/reset [post]
 func reset(c *fiber.Ctx) error {
 	var data map[string]string
 	if err := c.BodyParser(&data); err != nil {
@@ -222,30 +233,30 @@ func reset(c *fiber.Ctx) error {
 	}
 
 	if data["password"] != data["confirm_pass"] {
-		c.Status(400)
-		return c.JSON(fiber.Map{
-			"message": "Passwords do not match",
+		return StatusError(c, HttpError{
+			Message:    "Passwords do not match",
+			StatusCode: http.StatusBadRequest,
 		})
 	}
 
 	var passwordReset = models.PasswordReset{}
 
-	if res := database.DB.Where("token = ?", data["token"]).Last(&passwordReset); res.Error != nil {
-		c.Status(http.StatusBadRequest)
-		return c.JSON(fiber.Map{
-			"message": "Invalid token!",
+	if res := service.DB.Where("token = ?", data["token"]).Last(&passwordReset); res.Error != nil {
+		return StatusError(c, HttpError{
+			Message:    "Invalid token!",
+			StatusCode: http.StatusBadRequest,
 		})
 	}
 
 	password, _ := bcrypt.GenerateFromPassword([]byte(data["password"]), 14)
-	database.DB.Model(&models.User{}).Where("email = ?", passwordReset.Email).Update("password", password)
+	service.DB.Model(&models.User{}).Where("email = ?", passwordReset.Email).Update("password", password)
 
-	return c.JSON(fiber.Map{
+	return StatusOk(c, fiber.Map{
 		"message": "success",
 	})
 }
 
-func (api *API) InitAuth() {
+func (api *Api) InitAuth() {
 	auth := api.BaseRoutes.Auth
 	auth.Post("register", register)
 	auth.Post("login", login)

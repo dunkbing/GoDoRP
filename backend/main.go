@@ -2,13 +2,17 @@ package main
 
 import (
 	"github.com/dunkbing/sfw-checker-viet/backend/api"
-	"github.com/dunkbing/sfw-checker-viet/backend/database"
+	database "github.com/dunkbing/sfw-checker-viet/backend/services"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
+	"github.com/joho/godotenv"
 )
 
 func main() {
-	database.Connect()
+	_ = godotenv.Load()
+
+	// database.Connect()
+	defer database.Close()
 
 	app := fiber.New()
 
@@ -17,7 +21,6 @@ func main() {
 		AllowOrigins:     "http://localhost:3000",
 	}))
 
-	api.Init(app)
-
-	app.Listen(":8080")
+	server := api.New()
+	server.Init()
 }

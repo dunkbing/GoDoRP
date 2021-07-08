@@ -1,7 +1,9 @@
 package api
 
 import (
+	"fmt"
 	"net/http"
+	"os"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -11,43 +13,55 @@ type Routes struct {
 	Auth    fiber.Router
 }
 
-type API struct {
+type Api struct {
 	app        *fiber.App
 	BaseRoutes *Routes
 }
 
-const API_PREFIX = "api"
+func New() *Api{
+	return &Api{}
+}
+
+const PrefixApi = "api"
 
 func StatusOk(c *fiber.Ctx, json interface{}) error {
 	c.Status(http.StatusOK)
-	return c.JSON(json)
+	return c.JSON(fiber.Map{
+		"status": "success",
+		"result": json,
+	})
+}
+
+func StatusError(c *fiber.Ctx, httpError HttpError) error {
+	c.Status(httpError.StatusCode)
+	return c.JSON(fiber.Map{
+		"status": "failed",
+		"result": httpError,
+	})
 }
 
 func StatusCreated(c *fiber.Ctx, json interface{}) error {
 	c.Status(http.StatusCreated)
-	return c.JSON(json)
+	return c.JSON(fiber.Map{
+		"status": "success",
+		"result": json,
+	})
 }
 
-func StatusBadRequest(c *fiber.Ctx, appError AppError) error {
-	c.Status(http.StatusBadRequest)
-	return c.JSON(appError)
-}
+func (api *Api) Init() {
+	app := fiber.New()
+	routes := &Routes{}
 
-func StatusNotFound(c *fiber.Ctx, appError AppError) error {
-	c.Status(http.StatusNotFound)
-	return c.JSON(appError)
-}
+	api.app = app
+	api.BaseRoutes = routes
 
-func Init(app *fiber.App) {
-	api := &API{
-		app:        app,
-		BaseRoutes: &Routes{},
-	}
+	app.Static("/", "./frontend")
 
-	api.BaseRoutes.ApiRoot = app.Group(API_PREFIX)
+	api.BaseRoutes.ApiRoot = app.Group(PrefixApi)
 	api.BaseRoutes.Auth = api.BaseRoutes.ApiRoot.Group("auth")
 
 	api.InitAuth()
+	app.Listen(fmt.Sprintf(":%s", os.Getenv("PORT")))
 }
 
 // func Setup(app *fiber.App) {
