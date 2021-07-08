@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 
+	service "github.com/dunkbing/sfw-checker-viet/backend/services"
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -32,7 +33,7 @@ func StatusOk(c *fiber.Ctx, json interface{}) error {
 	})
 }
 
-func StatusError(c *fiber.Ctx, httpError HttpError) error {
+func StatusError(c *fiber.Ctx, httpError service.HttpError) error {
 	c.Status(httpError.StatusCode)
 	return c.JSON(fiber.Map{
 		"status": "failed",

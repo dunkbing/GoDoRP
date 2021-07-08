@@ -2,18 +2,20 @@ package service
 
 import (
 	"errors"
-	"github.com/dgrijalva/jwt-go"
-	"github.com/dunkbing/sfw-checker-viet/backend/models"
-	"github.com/dunkbing/sfw-checker-viet/backend/api"
-	"github.com/dunkbing/sfw-checker-viet/backend/utils"
-	"golang.org/x/crypto/bcrypt"
-	"gorm.io/gorm"
 	"net/http"
 	"strconv"
 	"time"
+
+	"github.com/dgrijalva/jwt-go"
+	"github.com/dunkbing/sfw-checker-viet/backend/models"
+	"github.com/dunkbing/sfw-checker-viet/backend/utils"
+	"golang.org/x/crypto/bcrypt"
+	"gorm.io/gorm"
 )
 
-func Register(registerUser models.RegisterUser) (models.User, error) {
+type authService struct {}
+
+func (authService) Register(registerUser models.RegisterUser) (models.User, error) {
 	var dbUser models.User
 
 	if utils.ValidEmail(registerUser.Email) {
@@ -38,20 +40,26 @@ func Register(registerUser models.RegisterUser) (models.User, error) {
 	dbUser.Email = registerUser.Email
 	dbUser.Password = string(password)
 
-	Database.Create(&dbUser)
+	err := Database.Create(&dbUser).Error
 
-	return dbUser, nil
+	return dbUser, err
 }
 
-func Login(loginUser models.LoginUser) (string, api.HttpError) {
+func (authService) Login(loginUser models.LoginUser) (string, *HttpError) {
 	var dbUser models.User
 
 	if err := Database.Where("email = ?", loginUser.Email).First(&dbUser).Error; errors.Is(err, gorm.ErrRecordNotFound) {
-		return "", errors.New("user not found"), http.StatusNotFound
+		return "", &HttpError{
+			Message: "user not found",
+			StatusCode: http.StatusNotFound,
+		}
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(dbUser.Password), []byte(loginUser.Password)); err != nil {
-		return "", errors.New("incorrect password"), http.StatusBadRequest
+		return "", &HttpError{
+			Message: "incorrect password",
+			StatusCode: http.StatusBadRequest,
+		}
 	}
 
 	claims := jwt.StandardClaims{
@@ -62,17 +70,28 @@ func Login(loginUser models.LoginUser) (string, api.HttpError) {
 
 	jwtToken := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	token, err := jwtToken.SignedString([]byte("secret"))
-	return token, err, 0
+	return token, &HttpError{
+		Message: err.Error(),
+	}
 }
 
-func User(id string) (models.User, error, int) {
+func (authService) User(id string) (models.User, *HttpError) {
 	var user models.User
 	res := Database.Where("id = ?", id).First(&user)
 	err := res.Error
 
 	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return user, err, http.StatusNotFound
+		return user, &HttpError{
+			Message: "User not found",
+			StatusCode: http.StatusNotFound,
+		}
 	}
 
-	return user, err, 0
+	return user, &HttpError{
+		Message: err.Error(),
+	}
+}
+
+func GetAuthService() authService {
+	return authService{}
 }

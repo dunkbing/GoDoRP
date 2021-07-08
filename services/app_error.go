@@ -1,4 +1,4 @@
-package api
+package service
 
 type HttpError struct {
 	Id            string `json:"-"`

@@ -15,6 +15,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+
 // @Summary Register a new user.
 // @Description Register a new user.
 // @Tags register
@@ -27,16 +28,17 @@ import (
 func register(c *fiber.Ctx) error {
 	var registerUser models.RegisterUser
 	if err := c.BodyParser(&registerUser); err != nil {
-		return StatusError(c, HttpError{
+		return StatusError(c, service.HttpError{
 			Message:    err.Error(),
 			StatusCode: http.StatusBadRequest,
 		})
 	}
+	var authService = service.GetAuthService()
 
-	dbUser, err := service.Register(registerUser)
+	dbUser, err := authService.Register(registerUser)
 
 	if err != nil {
-		return StatusError(c, HttpError{
+		return StatusError(c, service.HttpError{
 			Message:    err.Error(),
 			StatusCode: http.StatusBadRequest,
 		})
@@ -57,19 +59,17 @@ func register(c *fiber.Ctx) error {
 func login(c *fiber.Ctx) error {
 	var loginUser models.LoginUser
 	if err := c.BodyParser(&loginUser); err != nil {
-		return StatusError(c, HttpError{
+		return StatusError(c, service.HttpError{
 			Message:    err.Error(),
 			StatusCode: http.StatusBadRequest,
 		})
 	}
+	var authService = service.GetAuthService()
 
-	token, err, errorCode := service.Login(loginUser)
+	token, err := authService.Login(loginUser)
 
 	if err != nil {
-		return StatusError(c, HttpError{
-			Message:    err.Error(),
-			StatusCode: errorCode,
-		})
+		return StatusError(c, *err)
 	}
 
 	cookie := fiber.Cookie{
@@ -99,27 +99,26 @@ func user(c *fiber.Ctx) error {
 
 	claims := jwt.StandardClaims{}
 
-	token, err := jwt.ParseWithClaims(cookie, &claims, func(t *jwt.Token) (interface{}, error) {
-		return []byte("secret"), nil
-	})
 	fmt.Println(claims)
+	
 
-	if err != nil || !token.Valid {
+	if token, err := jwt.ParseWithClaims(cookie, &claims, func(t *jwt.Token) (interface{}, error) {
+		return []byte("secret"), nil
+	}); err != nil || !token.Valid {
 		c.Status(http.StatusUnauthorized)
-		return StatusError(c, HttpError{
+		return StatusError(c, service.HttpError{
 			Message:    "unauthenticated",
 			StatusCode: http.StatusForbidden,
 		})
 	}
 
+	var authService = service.GetAuthService()
+
 	// fmt.Println(token.Claims)
 	id := claims.Issuer
-	user, err, errCode := service.User(id)
+	user, err := authService.User(id)
 	if err != nil {
-		return StatusError(c, HttpError{
-			Message:    err.Error(),
-			StatusCode: errCode,
-		})
+		return StatusError(c, *err)
 	}
 
 	return StatusOk(c, user)
@@ -157,7 +156,7 @@ func logout(c *fiber.Ctx) error {
 func forgot(c *fiber.Ctx) error {
 	var data map[string]string
 	if err := c.BodyParser(&data); err != nil {
-		return StatusError(c, HttpError{
+		return StatusError(c, service.HttpError{
 			Message:    err.Error(),
 			StatusCode: http.StatusInternalServerError,
 		})
@@ -166,7 +165,7 @@ func forgot(c *fiber.Ctx) error {
 	email := data["email"]
 
 	if !utils.ValidEmail(email) {
-		return StatusError(c, HttpError{
+		return StatusError(c, service.HttpError{
 			Message:    "invalid email",
 			StatusCode: http.StatusBadRequest,
 		})
@@ -177,14 +176,14 @@ func forgot(c *fiber.Ctx) error {
 	res := service.Database.Model(&user).Where("email = ?", email).First(&user)
 
 	if res.Error != nil {
-		return StatusError(c, HttpError{
+		return StatusError(c, service.HttpError{
 			Message:    "some error occur",
 			StatusCode: http.StatusInternalServerError,
 		})
 	}
 
 	if user.Email == "" {
-		return StatusError(c, HttpError{
+		return StatusError(c, service.HttpError{
 			Message:    "email does not exist",
 			StatusCode: http.StatusNotFound,
 		})
@@ -233,7 +232,7 @@ func reset(c *fiber.Ctx) error {
 	}
 
 	if data["password"] != data["confirm_pass"] {
-		return StatusError(c, HttpError{
+		return StatusError(c, service.HttpError{
 			Message:    "Passwords do not match",
 			StatusCode: http.StatusBadRequest,
 		})
@@ -242,7 +241,7 @@ func reset(c *fiber.Ctx) error {
 	var passwordReset = models.PasswordReset{}
 
 	if res := service.Database.Where("token = ?", data["token"]).Last(&passwordReset); res.Error != nil {
-		return StatusError(c, HttpError{
+		return StatusError(c, service.HttpError{
 			Message:    "Invalid token!",
 			StatusCode: http.StatusBadRequest,
 		})
